@@ -50,7 +50,6 @@ services:
   - type: web
     name: coep-frontend
     env: static
-    region: oregon
     plan: free
     buildCommand: |
       cd frontend
