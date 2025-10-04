@@ -1,18 +1,69 @@
 const express = require('express');
 const { sequelize } = require('../config/database');
 const bcrypt = require('bcryptjs');
+const { exec } = require('child_process');
+const path = require('path');
 
 const router = express.Router();
+
+// @route   POST /api/init/migrate
+// @desc    Run database migrations
+// @access  Public (one-time use)
+router.post('/migrate', async (req, res) => {
+  try {
+    // Run migrations using sequelize-cli
+    const migrationCommand = 'npx sequelize-cli db:migrate';
+    
+    exec(migrationCommand, { cwd: path.join(__dirname, '../../') }, (error, stdout, stderr) => {
+      if (error) {
+        console.error('Migration error:', error);
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Migration failed', 
+          details: error.message,
+          stderr: stderr 
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: 'Migrations completed successfully',
+        output: stdout 
+      });
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to run migrations', 
+      details: error.message 
+    });
+  }
+});
 
 // @route   POST /api/init
 // @desc    Initialize database with demo data (for production)
 // @access  Public (one-time use)
-router.post('/init', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
+    // Check if users table exists
+    try {
+      await sequelize.query('SELECT 1 FROM users LIMIT 1');
+    } catch (tableError) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Tables not found. Please run migrations first.',
+        suggestion: 'POST to /api/init/migrate first'
+      });
+    }
+
     // Check if users already exist
     const [users] = await sequelize.query('SELECT COUNT(*) as count FROM users');
     if (users[0].count > 0) {
-      return res.json({ message: 'Database already initialized', users: users[0].count });
+      return res.json({ 
+        success: true,
+        message: 'Database already initialized', 
+        users: users[0].count 
+      });
     }
 
     // Create demo data
@@ -47,6 +98,7 @@ router.post('/init', async (req, res) => {
     `);
 
     res.json({ 
+      success: true,
       message: 'Database initialized successfully',
       users: 3,
       categories: 4,
@@ -56,6 +108,7 @@ router.post('/init', async (req, res) => {
   } catch (error) {
     console.error('Database initialization error:', error);
     res.status(500).json({ 
+      success: false,
       error: 'Failed to initialize database',
       details: error.message 
     });
@@ -67,18 +120,38 @@ router.post('/init', async (req, res) => {
 // @access  Public
 router.get('/status', async (req, res) => {
   try {
+    // Check if tables exist
+    const tables = await sequelize.query(`
+      SELECT table_name FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name IN ('users', 'categories', 'university_bodies')
+    `);
+    
+    if (tables[0].length < 3) {
+      return res.json({
+        initialized: false,
+        tablesExist: false,
+        foundTables: tables[0].map(t => t.table_name),
+        message: 'Database tables not found. Run migrations first.'
+      });
+    }
+
     const [users] = await sequelize.query('SELECT COUNT(*) as count FROM users');
     const [categories] = await sequelize.query('SELECT COUNT(*) as count FROM categories');
     const [universityBodies] = await sequelize.query('SELECT COUNT(*) as count FROM university_bodies');
 
     res.json({
       initialized: users[0].count > 0,
+      tablesExist: true,
       users: users[0].count,
       categories: categories[0].count,
       universityBodies: universityBodies[0].count
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to check status', details: error.message });
+    res.status(500).json({ 
+      error: 'Failed to check status', 
+      details: error.message,
+      suggestion: 'Database tables might not exist. Try running migrations first.'
+    });
   }
 });
 

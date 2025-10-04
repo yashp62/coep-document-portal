@@ -4,7 +4,7 @@
   "description": "Backend API for University Curriculum & Document Portal",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "npx sequelize-cli db:migrate && node src/server.js",
     "dev": "nodemon src/server.js",
     "build": "echo 'No build step required for Node.js'",
     "test": "jest",
@@ -36,6 +36,7 @@
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "sequelize": "^6.35.0",
+    "sequelize-cli": "^6.6.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },
@@ -44,7 +45,6 @@
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^30.1.2",
     "nodemon": "^3.0.2",
-    "sequelize-cli": "^6.6.2",
     "supertest": "^6.3.3"
   },
   "keywords": [
