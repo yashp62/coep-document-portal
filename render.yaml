@@ -64,6 +64,5 @@ services:
 databases:
   - name: coep-database
     databaseName: coep_document_portal
-    user: admin
     region: oregon
     plan: free
