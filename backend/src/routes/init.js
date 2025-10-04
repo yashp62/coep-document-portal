@@ -91,16 +91,70 @@ router.post('/create-tables', async (req, res) => {
 // @access  Public (one-time use)
 router.post('/', async (req, res) => {
   try {
-    // Check if users table exists, if not try to create tables first
+    // First, try to create tables if they don't exist
     try {
-      await sequelize.query('SELECT 1 FROM users LIMIT 1');
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS categories (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL UNIQUE,
+          description TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS university_bodies (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          type VARCHAR(50) CHECK (type IN ('board', 'committee')),
+          description TEXT,
+          admin_id INTEGER,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          email VARCHAR(255) NOT NULL UNIQUE,
+          password_hash VARCHAR(255) NOT NULL,
+          role VARCHAR(50) CHECK (role IN ('super_admin', 'admin', 'sub_admin')) DEFAULT 'sub_admin',
+          first_name VARCHAR(255) NOT NULL,
+          last_name VARCHAR(255) NOT NULL,
+          designation VARCHAR(255),
+          university_body_id INTEGER REFERENCES university_bodies(id) ON DELETE SET NULL,
+          is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS documents (
+          id SERIAL PRIMARY KEY,
+          title VARCHAR(255) NOT NULL,
+          description TEXT,
+          file_name VARCHAR(255) NOT NULL,
+          file_path VARCHAR(500) NOT NULL,
+          file_size INTEGER,
+          mime_type VARCHAR(100),
+          category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+          uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          university_body_id INTEGER REFERENCES university_bodies(id) ON DELETE SET NULL,
+          status VARCHAR(50) CHECK (status IN ('pending', 'approved', 'rejected')) DEFAULT 'pending',
+          approved_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          approved_at TIMESTAMP,
+          is_public BOOLEAN DEFAULT false,
+          version VARCHAR(50) DEFAULT '1.0',
+          tags TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
     } catch (tableError) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Tables not found. Please create tables first.',
-        suggestion: 'POST to /api/init/create-tables first',
-        details: tableError.message
-      });
+      console.log('Table creation warning:', tableError.message);
     }
 
     // Check if users already exist
