@@ -11,6 +11,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const documentRoutes = require('./routes/documents');
 const universityBodyRoutes = require('./routes/universityBodies');
+const initRoutes = require('./routes/init');
 
 // Role-specific routes
 const superAdminUserRoutes = require('./routes/superAdminUsers');
@@ -42,7 +43,12 @@ app.use(compression());
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000', 
+    'https://coep-frontend.onrender.com',
+    process.env.CORS_ORIGIN
+  ].filter(Boolean),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -62,8 +68,20 @@ app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    env: process.env.NODE_ENV,
+    port: PORT
   });
+});
+
+// Database health check
+app.get('/health/db', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.json({ status: 'OK', database: 'connected' });
+  } catch (error) {
+    res.status(500).json({ status: 'ERROR', database: 'disconnected', error: error.message });
+  }
 });
 
 // Swagger UI
@@ -74,6 +92,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
 }));
 
 // API routes
+app.use('/api/init', initRoutes);
 app.use('/api/auth', authRoutes);
 
 // Legacy routes (for backwards compatibility)
