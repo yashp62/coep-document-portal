@@ -1,9 +1,11 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const { User, UniversityBody } = require('../models');
 const { generateToken } = require('../utils/jwt');
 const { validateLogin } = require('../middleware/validation');
 const { authenticateToken } = require('../middleware/auth');
+const { sequelize } = require('../config/database');
 
 const router = express.Router();
 
@@ -240,6 +242,130 @@ router.post('/verify-token', (req, res, next) => {
       });
     }
     next(error);
+  }
+});
+
+// Temporary init endpoint for emergency database setup
+router.post('/init-db', async (req, res) => {
+  try {
+    // Create tables
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL UNIQUE,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS university_bodies (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        type VARCHAR(50) CHECK (type IN ('board', 'committee')),
+        description TEXT,
+        admin_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(50) CHECK (role IN ('super_admin', 'admin', 'sub_admin')) DEFAULT 'sub_admin',
+        first_name VARCHAR(255) NOT NULL,
+        last_name VARCHAR(255) NOT NULL,
+        designation VARCHAR(255),
+        university_body_id INTEGER REFERENCES university_bodies(id) ON DELETE SET NULL,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS documents (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        file_name VARCHAR(255) NOT NULL,
+        file_path VARCHAR(500) NOT NULL,
+        file_size INTEGER,
+        mime_type VARCHAR(100),
+        category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+        uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        university_body_id INTEGER REFERENCES university_bodies(id) ON DELETE SET NULL,
+        status VARCHAR(50) CHECK (status IN ('pending', 'approved', 'rejected')) DEFAULT 'pending',
+        approved_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        approved_at TIMESTAMP,
+        is_public BOOLEAN DEFAULT false,
+        version VARCHAR(50) DEFAULT '1.0',
+        tags TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Check if data already exists
+    const [users] = await sequelize.query('SELECT COUNT(*) as count FROM users');
+    if (users[0].count > 0) {
+      return res.json({ 
+        success: true,
+        message: 'Database already initialized', 
+        users: users[0].count 
+      });
+    }
+
+    // Create demo data
+    const saltRounds = 12;
+    const hashedAdminPassword = await bcrypt.hash('admin123', saltRounds);
+    const hashedSuperAdminPassword = await bcrypt.hash('superadmin123', saltRounds);
+
+    // Create categories
+    await sequelize.query(`
+      INSERT INTO categories (name, description, created_at, updated_at) VALUES 
+      ('Academic', 'Academic related documents', NOW(), NOW()),
+      ('Administrative', 'Administrative documents', NOW(), NOW()),
+      ('Financial', 'Financial documents', NOW(), NOW()),
+      ('General', 'General documents', NOW(), NOW())
+    `);
+
+    // Create university bodies
+    await sequelize.query(`
+      INSERT INTO university_bodies (name, type, description, admin_id, created_at, updated_at) VALUES 
+      ('Academic Council', 'board', 'Main academic governing body', NULL, NOW(), NOW()),
+      ('Finance Committee', 'committee', 'Financial oversight committee', NULL, NOW(), NOW()),
+      ('Student Development Board', 'board', 'Student affairs and development', NULL, NOW(), NOW()),
+      ('Examination Board', 'board', 'Examination and evaluation oversight', NULL, NOW(), NOW())
+    `);
+
+    // Create users
+    await sequelize.query(`
+      INSERT INTO users (email, password_hash, role, first_name, last_name, designation, university_body_id, is_active, created_at, updated_at) VALUES 
+      ('superadmin@coep.ac.in', '${hashedSuperAdminPassword}', 'super_admin', 'System', 'Super Admin', 'System Administrator', NULL, true, NOW(), NOW()),
+      ('admin@coep.ac.in', '${hashedAdminPassword}', 'admin', 'Dr. Admin', 'User', 'Administrator', NULL, true, NOW(), NOW()),
+      ('subadmin@coep.ac.in', '${hashedAdminPassword}', 'sub_admin', 'Sub Admin', 'User', 'Assistant Administrator', NULL, true, NOW(), NOW())
+    `);
+
+    res.json({ 
+      success: true,
+      message: 'Database initialized successfully via emergency route',
+      users: 3,
+      categories: 4,
+      universityBodies: 4
+    });
+
+  } catch (error) {
+    console.error('Emergency DB init error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to initialize database',
+      details: error.message 
+    });
   }
 });
 
