@@ -5,11 +5,11 @@ import toast from 'react-hot-toast'
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
   (import.meta.env.MODE === 'production' 
     ? 'https://coep-backend.onrender.com' 
-    : 'http://localhost:5001')
+    : 'http://localhost:5000')
 
 // Create axios instance
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
+  baseURL: API_BASE_URL,
   timeout: 30000, // Increased timeout for cloud deployment
   headers: {
     'Content-Type': 'application/json',

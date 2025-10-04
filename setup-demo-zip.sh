@@ -179,9 +179,9 @@ INSERT IGNORE INTO university_bodies (name, type, description, admin_id, created
 
 -- Create demo users (using pre-hashed passwords)
 INSERT IGNORE INTO users (email, password_hash, role, first_name, last_name, designation, university_body_id, is_active, created_at, updated_at) VALUES 
-('superadmin@coep.ac.in', '\$2a\$12\$LQv3c1yqBw2LeOGQZ6mO.OVrWEVSHGvMLgXy1N8nHQ6VZ4XHWD1Nq', 'super_admin', 'System', 'Super Admin', 'System Administrator', NULL, 1, NOW(), NOW()),
-('admin@coep.ac.in', '\$2a\$12\$LQv3c1yqBw2LeOGQZ6mO.OVrWEVSHGvMLgXy1N8nHQ6VZ4XHWD1Nq', 'admin', 'Dr. Admin', 'User', 'Administrator', NULL, 1, NOW(), NOW()),
-('subadmin@coep.ac.in', '\$2a\$12\$LQv3c1yqBw2LeOGQZ6mO.OVrWEVSHGvMLgXy1N8nHQ6VZ4XHWD1Nq', 'sub_admin', 'Sub Admin', 'User', 'Assistant Administrator', NULL, 1, NOW(), NOW());
+('superadmin@coep.ac.in', '\$2a\$12\$zJZaxXGLOLwbD3vJQuMCDOQY6Wk.BTBwfJS.5RLk7wpmDJrd0fHaS', 'super_admin', 'System', 'Super Admin', 'System Administrator', NULL, 1, NOW(), NOW()),
+('admin@coep.ac.in', '\$2a\$12\$AdfCUtkDKzNLtDufhs070.oRksCcw0sML8c.OG8wu5.I8ikFr.nTK', 'admin', 'Dr. Admin', 'User', 'Administrator', NULL, 1, NOW(), NOW()),
+('subadmin@coep.ac.in', '\$2a\$12\$AdfCUtkDKzNLtDufhs070.oRksCcw0sML8c.OG8wu5.I8ikFr.nTK', 'sub_admin', 'Sub Admin', 'User', 'Assistant Administrator', NULL, 1, NOW(), NOW());
 " 2>/dev/null
 
 if [ $? -eq 0 ]; then
