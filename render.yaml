@@ -7,9 +7,7 @@ services:
     buildCommand: |
       cd backend
       npm install
-      npx sequelize-cli db:migrate
-      # Skip seeding to avoid validation errors
-      echo "Migrations completed successfully"
+      echo "Build completed successfully - tables will be created via API"
     startCommand: cd backend && npm start
     healthCheckPath: /health
     envVars:
