@@ -50,7 +50,6 @@ services:
   - type: web
     name: coep-frontend
     env: static
-    plan: free
     buildCommand: |
       cd frontend
       npm install
