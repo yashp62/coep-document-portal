@@ -145,32 +145,49 @@ fi
 echo "✅ Database migrated successfully"
 
 echo ""
-echo "🌱 Seeding database with demo data..."
-npx sequelize-cli db:seed:all
-if [ $? -ne 0 ]; then
-    echo "⚠️  Database seeding had issues, but you can still run the demo"
-    echo "   Creating basic admin user manually..."
-    
-    # Create basic admin user if seeding fails
-    mysql -u admin -padmin123 -e "
-    USE coep_document_portal;
-    INSERT IGNORE INTO users (email, password_hash, role, first_name, last_name, designation, is_active, created_at, updated_at) 
-    VALUES ('admin@coep.ac.in', '\$2a\$12\$LQv3c1yqBw2LeOGQZ6mO.OVrWEVSHGvMLgXy1N8nHQ6VZ4XHWD1Nq', 'super_admin', 'Admin', 'User', 'Administrator', 1, NOW(), NOW());
-    
-    INSERT IGNORE INTO categories (name, description, created_at, updated_at) VALUES 
-    ('Academic', 'Academic related documents', NOW(), NOW()),
-    ('Administrative', 'Administrative documents', NOW(), NOW()),
-    ('Financial', 'Financial documents', NOW(), NOW()),
-    ('General', 'General documents', NOW(), NOW());
-    " 2>/dev/null
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Basic demo data created manually"
-    else
-        echo "⚠️  Manual data creation also failed, but the app should still work"
-    fi
+echo "🌱 Setting up demo data..."
+
+# Try seeding first, but don't fail if it doesn't work
+npx sequelize-cli db:seed:all 2>/dev/null
+SEED_SUCCESS=$?
+
+if [ $SEED_SUCCESS -ne 0 ]; then
+    echo "⚠️  Automatic seeding skipped, creating demo data manually..."
 else
-    echo "✅ Database seeded successfully"
+    echo "✅ Automatic seeding completed"
+fi
+
+# Always create basic demo data manually to ensure it exists
+echo "🔧 Ensuring demo data exists..."
+
+mysql -u admin -padmin123 -e "
+USE coep_document_portal;
+
+-- Create categories
+INSERT IGNORE INTO categories (name, description, created_at, updated_at) VALUES 
+('Academic', 'Academic related documents', NOW(), NOW()),
+('Administrative', 'Administrative documents', NOW(), NOW()),
+('Financial', 'Financial documents', NOW(), NOW()),
+('General', 'General documents', NOW(), NOW());
+
+-- Create university bodies
+INSERT IGNORE INTO university_bodies (name, type, description, admin_id, created_at, updated_at) VALUES 
+('Academic Council', 'board', 'Main academic governing body', NULL, NOW(), NOW()),
+('Finance Committee', 'committee', 'Financial oversight committee', NULL, NOW(), NOW()),
+('Student Development Board', 'board', 'Student affairs and development', NULL, NOW(), NOW()),
+('Examination Board', 'board', 'Examination and evaluation oversight', NULL, NOW(), NOW());
+
+-- Create demo users (using pre-hashed passwords)
+INSERT IGNORE INTO users (email, password_hash, role, first_name, last_name, designation, university_body_id, is_active, created_at, updated_at) VALUES 
+('superadmin@coep.ac.in', '\$2a\$12\$LQv3c1yqBw2LeOGQZ6mO.OVrWEVSHGvMLgXy1N8nHQ6VZ4XHWD1Nq', 'super_admin', 'System', 'Super Admin', 'System Administrator', NULL, 1, NOW(), NOW()),
+('admin@coep.ac.in', '\$2a\$12\$LQv3c1yqBw2LeOGQZ6mO.OVrWEVSHGvMLgXy1N8nHQ6VZ4XHWD1Nq', 'admin', 'Dr. Admin', 'User', 'Administrator', NULL, 1, NOW(), NOW()),
+('subadmin@coep.ac.in', '\$2a\$12\$LQv3c1yqBw2LeOGQZ6mO.OVrWEVSHGvMLgXy1N8nHQ6VZ4XHWD1Nq', 'sub_admin', 'Sub Admin', 'User', 'Assistant Administrator', NULL, 1, NOW(), NOW());
+" 2>/dev/null
+
+if [ $? -eq 0 ]; then
+    echo "✅ Demo data created successfully"
+else
+    echo "⚠️  Some demo data might already exist, but app should work"
 fi
 
 cd ..

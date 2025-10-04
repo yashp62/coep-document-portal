@@ -35,21 +35,17 @@ cd coep-document-portal
    CREATE DATABASE coep_document_portal;
    ```
 3. Edit `backend/.env` with your MySQL root credentials
-4. Run migrations: `cd backend && npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all`
+4. Run migrations: `cd backend && npx sequelize-cli db:migrate`
 
-**Note**: If you get a validation error, try running the migrations and seeding separately:
-```bash
-cd backend
-npx sequelize-cli db:migrate
-npx sequelize-cli db:seed:all
-```
+**Skip seeding** - the setup script handles data creation automatically!
 
-If seeding still fails, you can manually create a super admin user:
+If you want to create demo data manually:
 ```sql
-mysql -u root -p
+mysql -u admin -padmin123
 USE coep_document_portal;
 INSERT INTO users (email, password_hash, role, first_name, last_name, designation, is_active, created_at, updated_at) 
 VALUES ('admin@coep.ac.in', '$2a$12$LQv3c1yqBw2LeOGQZ6mO.OVrWEVSHGvMLgXy1N8nHQ6VZ4XHWD1Nq', 'super_admin', 'Admin', 'User', 'Administrator', 1, NOW(), NOW());
+EXIT;
 ```
 (Password: admin123)
 

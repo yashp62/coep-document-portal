@@ -69,7 +69,16 @@ EXIT;
 ```bash
 cd backend
 npx sequelize-cli db:migrate
-npx sequelize-cli db:seed:all
+```
+
+**Don't run seeding** - it may cause validation errors. Instead, create admin user manually:
+
+```sql
+mysql -u admin -padmin123
+USE coep_document_portal;
+INSERT INTO users (email, password_hash, role, first_name, last_name, designation, is_active, created_at, updated_at) 
+VALUES ('admin@coep.ac.in', '$2a$12$LQv3c1yqBw2LeOGQZ6mO.OVrWEVSHGvMLgXy1N8nHQ6VZ4XHWD1Nq', 'super_admin', 'Admin', 'User', 'Administrator', 1, NOW(), NOW());
+EXIT;
 ```
 
 ## 🚀 Start Demo
