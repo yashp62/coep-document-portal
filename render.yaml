@@ -1,11 +1,14 @@
 services:
-  # Backend API Service
   - type: web
     name: coep-backend
     env: node
     region: oregon
     plan: free
-    buildCommand: cd backend && npm install && npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all
+    buildCommand: |
+      cd backend
+      npm install
+      npx sequelize-cli db:migrate
+      npx sequelize-cli db:seed:all
     startCommand: cd backend && npm start
     healthCheckPath: /health
     envVars:
@@ -44,13 +47,15 @@ services:
       - key: BCRYPT_ROUNDS
         value: 12
 
-  # Frontend Static Site
   - type: web
     name: coep-frontend
     env: static
     region: oregon
     plan: free
-    buildCommand: cd frontend && npm install && npm run build
+    buildCommand: |
+      cd frontend
+      npm install
+      npm run build
     publishDir: frontend/dist
     routes:
       - type: rewrite
@@ -60,7 +65,6 @@ services:
       - key: VITE_API_URL
         value: https://coep-backend.onrender.com
 
-# Database
 databases:
   - name: coep-database
     databaseName: coep_document_portal
